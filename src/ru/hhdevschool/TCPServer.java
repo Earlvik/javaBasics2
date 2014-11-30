@@ -17,7 +17,7 @@ public class TCPServer {
             try {
                 ServerSocket ss = new ServerSocket(port);
                 System.out.println("Waiting for a client...");
-                while(true) {
+               while(true) {
                     Socket socket = ss.accept();
                     System.out.println("Got a client");
                     System.out.println();
@@ -25,7 +25,7 @@ public class TCPServer {
                 }
             } catch(Exception x) { x.printStackTrace(); }
             finally {
-                ClientHandler.CloseAll();
+               ClientHandler.CloseAll();
 
             }
         }

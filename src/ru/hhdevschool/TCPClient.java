@@ -3,6 +3,7 @@ package ru.hhdevschool;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.Random;
 
 /**
@@ -24,8 +25,8 @@ public class TCPClient {
             InputStream sin = socket.getInputStream();
             OutputStream sout = socket.getOutputStream();
 
-            final InputStreamReader in = new InputStreamReader(sin);
-            OutputStreamWriter out = new OutputStreamWriter(sout);
+            final BufferedReader in = new BufferedReader(new InputStreamReader(sin));
+            PrintWriter out = new PrintWriter(sout);
 
             // Создаем поток для чтения с клавиатуры.
             BufferedReader keyboard = new BufferedReader(new InputStreamReader(System.in));
@@ -39,16 +40,11 @@ public class TCPClient {
                 public void run() {
                     while(true){
                         try {
-                            StringBuilder builder = new StringBuilder();
                             String line;
-                            char ch;
-                            while((ch = (char)in.read()) != -1){
-                                builder.append(ch);
-                            }
-                            line = builder.toString();
+                            line = in.readLine();
                             if(line == null) continue;
                             System.out.println("Got message: " + line);
-                        }catch (EOFException e) {
+                        }catch (SocketException e) {
                             System.out.println("Server stopped responding");
                             return;
                         }catch (IOException e) {
@@ -62,9 +58,9 @@ public class TCPClient {
             while (true) {
                 line = keyboard.readLine(); // ждем пока пользователь введет что-то и нажмет кнопку Enter.
                 System.out.println("Sending this line to the server...");
-                out.write(line); // отсылаем введенную строку текста серверу.
+                out.println(line); // отсылаем введенную строку текста серверу.
                 out.flush();
-                            }
+               }
         } catch (Exception x) {
             x.printStackTrace();
         }

@@ -2,6 +2,7 @@ package ru.hhdevschool;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,32 +11,27 @@ import java.util.List;
  */
 class ClientHandler implements Runnable{
 
-    InputStreamReader in;
-    OutputStreamWriter out;
+    BufferedReader in;
+    PrintWriter out;
     static List<ClientHandler> handlers = new java.util.concurrent.CopyOnWriteArrayList<ClientHandler>();
 
     public ClientHandler(Socket clientSocket) throws IOException {
-        in = new InputStreamReader(clientSocket.getInputStream());
-        out = new OutputStreamWriter(clientSocket.getOutputStream());
+        in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        out = new PrintWriter(clientSocket.getOutputStream(),true);
         handlers.add(this);
     }
     @Override
     public void run() {
-
         while(true){
-            try{
+           try{
             try {
-                StringBuilder builder = new StringBuilder();
                 String line;
-                char ch;
-                while((ch = (char)in.read()) != -1){
-                    builder.append(ch);
-                }
-                line = builder.toString();
+                while(!in.ready());
+                line = in.readLine();
                 if(line == null) continue;
                 System.out.println("One of the clients just sent me this line : " + line);
                 broadcast(line);
-            } catch(EOFException e) {
+            } catch(SocketException e) {
                 System.out.println("One of clients disconnected");
                 handlers.remove(this);
                 in.close();
@@ -47,12 +43,13 @@ class ClientHandler implements Runnable{
 
             }
         }
+
     }
 
     private synchronized void broadcast(String line) throws IOException {
         for(ClientHandler handler:handlers){
             if(handler == this) continue;
-            handler.out.write(line);
+            handler.out.println(line);
             handler.out.flush();
         }
     }
