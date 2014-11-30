@@ -26,7 +26,6 @@ class ClientHandler implements Runnable{
            try{
             try {
                 String line;
-                while(!in.ready());
                 line = in.readLine();
                 if(line == null) continue;
                 System.out.println("One of the clients just sent me this line : " + line);
