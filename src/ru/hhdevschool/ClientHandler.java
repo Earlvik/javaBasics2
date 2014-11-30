@@ -29,7 +29,7 @@ class ClientHandler implements Runnable{
                 line = in.readLine();
                 if(line == null) continue;
                 System.out.println("One of the clients just sent me this line : " + line);
-                broadcast(line);
+                broadcast(line, this);
             } catch(SocketException e) {
                 System.out.println("One of clients disconnected");
                 handlers.remove(this);
@@ -45,9 +45,9 @@ class ClientHandler implements Runnable{
 
     }
 
-    private synchronized void broadcast(String line) throws IOException {
+    private static synchronized void broadcast(String line, ClientHandler sender) throws IOException {
         for(ClientHandler handler:handlers){
-            if(handler == this) continue;
+            if(handler == sender) continue;
             handler.out.println(line);
             handler.out.flush();
         }
