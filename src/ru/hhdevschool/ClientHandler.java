@@ -1,9 +1,6 @@
 package ru.hhdevschool;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,22 +10,29 @@ import java.util.List;
  */
 class ClientHandler implements Runnable{
 
-    DataInputStream in;
-    DataOutputStream out;
-    static List<ClientHandler> handlers = new ArrayList<ClientHandler>();
+    InputStreamReader in;
+    OutputStreamWriter out;
+    static List<ClientHandler> handlers = new java.util.concurrent.CopyOnWriteArrayList<ClientHandler>();
 
     public ClientHandler(Socket clientSocket) throws IOException {
-        in = new DataInputStream(clientSocket.getInputStream());
-        out = new DataOutputStream(clientSocket.getOutputStream());
+        in = new InputStreamReader(clientSocket.getInputStream());
+        out = new OutputStreamWriter(clientSocket.getOutputStream());
         handlers.add(this);
     }
     @Override
     public void run() {
-        String line;
+
         while(true){
             try{
             try {
-                line = in.readUTF();
+                StringBuilder builder = new StringBuilder();
+                String line;
+                char ch;
+                while((ch = (char)in.read()) != -1){
+                    builder.append(ch);
+                }
+                line = builder.toString();
+                if(line == null) continue;
                 System.out.println("One of the clients just sent me this line : " + line);
                 broadcast(line);
             } catch(EOFException e) {
@@ -47,7 +51,8 @@ class ClientHandler implements Runnable{
 
     private synchronized void broadcast(String line) throws IOException {
         for(ClientHandler handler:handlers){
-            handler.out.writeUTF(line);
+            if(handler == this) continue;
+            handler.out.write(line);
             handler.out.flush();
         }
     }

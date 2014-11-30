@@ -24,8 +24,8 @@ public class TCPClient {
             InputStream sin = socket.getInputStream();
             OutputStream sout = socket.getOutputStream();
 
-            final DataInputStream in = new DataInputStream(sin);
-            DataOutputStream out = new DataOutputStream(sout);
+            final InputStreamReader in = new InputStreamReader(sin);
+            OutputStreamWriter out = new OutputStreamWriter(sout);
 
             // Создаем поток для чтения с клавиатуры.
             BufferedReader keyboard = new BufferedReader(new InputStreamReader(System.in));
@@ -39,7 +39,14 @@ public class TCPClient {
                 public void run() {
                     while(true){
                         try {
-                            String line = in.readUTF();
+                            StringBuilder builder = new StringBuilder();
+                            String line;
+                            char ch;
+                            while((ch = (char)in.read()) != -1){
+                                builder.append(ch);
+                            }
+                            line = builder.toString();
+                            if(line == null) continue;
                             System.out.println("Got message: " + line);
                         }catch (EOFException e) {
                             System.out.println("Server stopped responding");
@@ -55,7 +62,7 @@ public class TCPClient {
             while (true) {
                 line = keyboard.readLine(); // ждем пока пользователь введет что-то и нажмет кнопку Enter.
                 System.out.println("Sending this line to the server...");
-                out.writeUTF(line); // отсылаем введенную строку текста серверу.
+                out.write(line); // отсылаем введенную строку текста серверу.
                 out.flush();
                             }
         } catch (Exception x) {
