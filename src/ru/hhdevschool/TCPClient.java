@@ -2,8 +2,11 @@ package ru.hhdevschool;
 
 import java.io.*;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
 import java.util.Random;
 
 /**
@@ -11,22 +14,34 @@ import java.util.Random;
  * Simple client able to send messages from standard input and receive all broadcasted messages
  */
 public class TCPClient {
+
+    private Selector selector;
+    private SocketChannel channel;
+
+
+
+    private String name;
+
+    public String getName() {
+        return name;
+    }
+
+    public TCPClient(){
+        name = "Client "+(new Random()).nextInt();
+    }
+
     public static void main(String[] ar) {
         int serverPort = 6666;
-        String address = "127.0.0.1";
+        //String address = "127.0.0.1";
+
+        TCPClient client = new TCPClient();
 
         try {
-            InetAddress ipAddress = InetAddress.getByName(address);
-            System.out.println("Trying to connect to a socket with IP address " + address + " and port " + serverPort);
-            Socket socket = new Socket(ipAddress, serverPort);
-            System.out.println("Connected to the server");
+            client.selector = Selector.open();
+            client.channel = SocketChannel.open();
+            client.channel.connect(new InetSocketAddress(serverPort));
+            System.out.println("Trying to connect to a socket with IP address " + client.channel.getRemoteAddress()+ " and port " + serverPort);
 
-
-            InputStream sin = socket.getInputStream();
-            OutputStream sout = socket.getOutputStream();
-
-            final BufferedReader in = new BufferedReader(new InputStreamReader(sin));
-            PrintWriter out = new PrintWriter(sout);
 
             // Создаем поток для чтения с клавиатуры.
             BufferedReader keyboard = new BufferedReader(new InputStreamReader(System.in));
@@ -39,18 +54,10 @@ public class TCPClient {
                 @Override
                 public void run() {
                     while(true){
-                        try {
-                            String line;
-                            line = in.readLine();
-                            if(line == null) continue;
-                            System.out.println("Got message: " + line);
-                        }catch (SocketException e) {
-                            System.out.println("Server stopped responding");
-                            return;
-                        }catch (IOException e) {
-                            e.printStackTrace();
-
-                        }
+                        String line="";
+                        //line = in.readLine();
+                        if(line == null) continue;
+                        System.out.println("Got message: " + line);
                     }
                 }
             }).start();
@@ -58,8 +65,8 @@ public class TCPClient {
             while (true) {
                 line = keyboard.readLine(); // ждем пока пользователь введет что-то и нажмет кнопку Enter.
                 System.out.println("Sending this line to the server...");
-                out.println(line); // отсылаем введенную строку текста серверу.
-                out.flush();
+                //out.println(line); // отсылаем введенную строку текста серверу.
+                //out.flush();
                }
         } catch (Exception x) {
             x.printStackTrace();
