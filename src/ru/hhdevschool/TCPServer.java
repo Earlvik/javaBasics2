@@ -73,7 +73,7 @@ public class TCPServer {
         this.serverSocketChannel.close();
         this.clientSelector.close();
     }
-    private void read(SelectionKey key) throws IOException {
+    private void accept(SelectionKey key) throws IOException {
         SocketChannel socketChannel = ((ServerSocketChannel)key.channel()).accept();
         String address = (new StringBuilder( socketChannel.socket().getInetAddress().toString() )).append(":")
                 .append(socketChannel.socket().getPort()).toString();
@@ -86,7 +86,7 @@ public class TCPServer {
 
     }
 
-    private void accept(SelectionKey key) throws IOException {
+    private void read(SelectionKey key) throws IOException {
         SocketChannel socketChannel = (SocketChannel)key.channel();
         StringBuilder builder = new StringBuilder();
 
@@ -107,13 +107,13 @@ public class TCPServer {
             message = key.attachment() + ": " + builder.toString();
         }
         System.out.println("Got message: "+message);
-        broadcast(message);
+        broadcast(message,key);
     }
 
-    private void broadcast(String message) throws IOException {
+    private void broadcast(String message, SelectionKey sender) throws IOException {
         ByteBuffer messageBuffer = ByteBuffer.wrap(message.getBytes());
         for(SelectionKey key: clientSelector.keys()){
-            if(key.isValid() && key.channel() instanceof SocketChannel){
+            if(key.isValid() && key.channel() instanceof SocketChannel && key!=sender){
                 SocketChannel socketChannel = (SocketChannel) key.channel();
                 socketChannel.write(messageBuffer);
                 messageBuffer.rewind();
