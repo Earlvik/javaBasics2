@@ -7,7 +7,11 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * Created by earlvik on 26.11.14.
@@ -19,6 +23,7 @@ public class TCPServer {
     private ServerSocketChannel serverSocketChannel;
     private ByteBuffer messageBuffer = ByteBuffer.allocate(256);
     private int port;
+    private Set<SocketChannel> socketSet = Collections.synchronizedSet(new HashSet<SocketChannel>());
 
     public TCPServer(int port) throws IOException{
         this.port = port;
@@ -33,24 +38,9 @@ public class TCPServer {
         this(6666);
     }
 
-        public static void main(String[] args)    {
-            try {
+        public static void main(String[] args) throws IOException {
                 final TCPServer server = new TCPServer();
-
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            server.start();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }).start();
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+                server.start();
         }
 
 
@@ -82,39 +72,53 @@ public class TCPServer {
         socketChannel.register(clientSelector, SelectionKey.OP_READ, address);
         socketChannel.write(welcomeBuffer);
         welcomeBuffer.rewind();
+        socketSet.add(socketChannel);
         System.out.println("Connected client at: "+address);
 
     }
 
-    private void read(SelectionKey key) throws IOException {
-        SocketChannel socketChannel = (SocketChannel)key.channel();
+    private void read(final SelectionKey key) throws IOException {
+        final SocketChannel socketChannel = (SocketChannel)key.channel();
         StringBuilder builder = new StringBuilder();
-
         messageBuffer.clear();
-        int read = 0;
-        while((read = socketChannel.read(messageBuffer)) > 0) {
-            messageBuffer.flip();
-            byte[] bytes = new byte[messageBuffer.limit()];
-            messageBuffer.get(bytes);
-            builder.append(new String(bytes));
-            messageBuffer.clear();
+        int read = -1;
+        try {
+            while ((read = socketChannel.read(messageBuffer)) > 0) {
+                messageBuffer.flip();
+                byte[] bytes = new byte[messageBuffer.limit()];
+                messageBuffer.get(bytes);
+                builder.append(new String(bytes));
+                messageBuffer.clear();
+            }
+            final String message;
+            if (read < 0) {
+                message = key.attachment() + " has left the chat\n";
+                socketSet.remove(socketChannel);
+                socketChannel.close();
+            } else {
+                message = key.attachment() + ": " + builder.toString();
+            }
+            System.out.println("Got message: " + message);
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        broadcast(message, socketChannel);
+                    }catch(IOException e){
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
+        }catch(IOException e){
+            System.out.println("Client has disconnected: "+key.attachment());
         }
-        String message;
-        if(read < 0) {
-            message = key.attachment() + " has left the chat\n";
-            socketChannel.close();
-        }else {
-            message = key.attachment() + ": " + builder.toString();
-        }
-        System.out.println("Got message: "+message);
-        broadcast(message,key);
+
     }
 
-    private void broadcast(String message, SelectionKey sender) throws IOException {
+    private void broadcast(String message, SocketChannel sender) throws IOException {
         ByteBuffer messageBuffer = ByteBuffer.wrap(message.getBytes());
-        for(SelectionKey key: clientSelector.keys()){
-            if(key.isValid() && key.channel() instanceof SocketChannel && key!=sender){
-                SocketChannel socketChannel = (SocketChannel) key.channel();
+        for(SocketChannel socketChannel: socketSet){
+            if(socketChannel!=sender){
                 socketChannel.write(messageBuffer);
                 messageBuffer.rewind();
             }

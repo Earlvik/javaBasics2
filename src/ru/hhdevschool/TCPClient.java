@@ -15,8 +15,6 @@ import java.util.Random;
  * Simple client able to send messages from standard input and receive all broadcasted messages
  */
 public class TCPClient {
-
-    private Selector selector;
     private SocketChannel channel;
     private ByteBuffer messageBuffer = ByteBuffer.allocate(256);
 
@@ -29,7 +27,7 @@ public class TCPClient {
     }
 
     public TCPClient(){
-        name = "Client "+(new Random()).nextInt();
+        name = "Client "+(new Random()).nextInt(20);
     }
 
     @Override
@@ -37,14 +35,13 @@ public class TCPClient {
         return name;
     }
 
-    public static void main(String[] ar) {
+    public static void main(String[] ar) throws IOException {
         int serverPort = 6666;
 
 
         final TCPClient client = new TCPClient();
 
         try {
-            client.selector = Selector.open();
             client.channel = SocketChannel.open();
             client.channel.configureBlocking(false);
             client.channel.connect(new InetSocketAddress(serverPort));
@@ -77,8 +74,8 @@ public class TCPClient {
                             String message = builder.toString();
                             System.out.println("Got message: "+message);
                         } catch (IOException e) {
-                            e.printStackTrace();
-
+                            System.out.println("Server has disconnected");
+                            break;
                         }
                     }
                 }
@@ -93,6 +90,8 @@ public class TCPClient {
             }
         } catch (Exception x) {
             x.printStackTrace();
+        }finally{
+            client.channel.close();
         }
     }
 
